@@ -65,6 +65,47 @@ class CDTRope:
 - Internal node property consistency
 ```
 
+### Chunk Size Considerations
+
+The choice of chunk size in production environments is critical and depends on several factors. Here's a comprehensive guide:
+
+#### Real-world References
+- Git: Variable chunks averaging ~8KB
+- ZFS: 128KB default block size
+- Btrfs: 4KB-64KB blocks
+- Dropbox: Historically used 4MB chunks
+
+#### Default Production Setting
+```python
+CHUNK_SIZE = 64 * 1024  # 64KB is a good starting point
+```
+
+#### Performance Impact
+
+Small Chunks (< 4KB):
+- Higher metadata overhead
+- Increased fragmentation
+- Higher hash processing cost
+
+Large Chunks (> 1MB):
+- Reduced deduplication efficiency
+- Higher memory usage
+- More expensive rehashing for small changes
+
+#### Memory Usage Considerations
+Each node requires memory for:
+- Pointers (16-24 bytes)
+- Hash (32 bytes typically)
+- Metadata (~20-40 bytes)
+
+Example: With 64KB chunks, 1GB of data would require approximately 16K nodes
+
+#### Recommended Sizes by Use Case
+- Small files: 4KB-16KB
+- Documents/code: 16KB-64KB
+- Media/binaries: 64KB-256KB
+- Streaming: 256KB-1MB
+
 ### Performance Considerations
 
 - The implementation uses content-based chunking to find natural split points in text
@@ -105,4 +146,4 @@ This is an experimental implementation. Contributions and suggestions are welcom
 
 ## License
 
-MIT
+MIT License.

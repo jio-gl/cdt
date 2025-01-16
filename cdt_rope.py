@@ -31,6 +31,15 @@ class CDTNode:
         right_height = self.right.height if self.right else 0
         self.height = max(left_height, right_height) + 1
 
+    def update_hash(self):
+        """Update hash based on children."""
+        if self.is_leaf():
+            self.hash = self._calculate_hash(self.text)
+        else:
+            left_hash = self.left.hash if self.left else ""
+            right_hash = self.right.hash if self.right else ""
+            self.hash = self._calculate_hash(left_hash + right_hash)
+
 class CDTRope:
     # Reducimos CHUNK_SIZE para tests
     CHUNK_SIZE = 8  # En producción usar 64 * 1024
@@ -156,6 +165,7 @@ class CDTRope:
                 new_right.right = node.right
                 new_right.weight = self._get_weight(right)
                 new_right.update_height()
+                new_right.update_hash()
                 return left, new_right
             return left, node.right
         else:
@@ -166,6 +176,7 @@ class CDTRope:
                 new_left.right = left
                 new_left.weight = current_weight + self._get_weight(left)
                 new_left.update_height()
+                new_left.update_hash()
                 return new_left, right
             return node.left, right
         
@@ -277,13 +288,14 @@ class CDTRope:
         return left_height - right_height
 
     def _rotate_left(self, node: CDTNode) -> CDTNode:
-        """Perform left rotation."""
         new_root = node.right
         node.right = new_root.left
         new_root.left = node
         
         node.update_height()
+        node.update_hash()  # Actualizar hash después de cambiar estructura
         new_root.update_height()
+        new_root.update_hash()  # Actualizar hash del nuevo root
         new_root.weight = node.weight + (new_root.left.weight if new_root.left else 0)
         
         return new_root
@@ -296,6 +308,7 @@ class CDTRope:
         
         node.update_height()
         new_root.update_height()
+        new_root.update_hash() # Similar a _rotate_left
         node.weight = (node.left.weight if node.left else 0)
         
         return new_root
@@ -345,8 +358,9 @@ class CDTRope:
         merged.right = right
         merged.weight = self._get_weight(left)
         
-        # The hash is already calculated in CDTNode.__init__
+        # Update both height and hash
         merged.update_height()
+        merged.update_hash()
         
         return merged
 
@@ -461,20 +475,33 @@ class TestCDTRope(unittest.TestCase):
         self.assertEqual(rope1.get_hash(), rope2.get_hash())
 
     def test_hash_changes(self):
-        """🔐 Tests hash behavior with text modifications"""
+        """🔐 Tests hash consistency and changes across text modifications"""
+        # Store initial state
         initial_hash = self.rope.get_hash()
         initial_text = self.rope.get_text()
         
+        # Modification 1: Insert at beginning
         self.rope.insert(0, "test")
         modified_hash = self.rope.get_hash()
+        # Hash should change when content changes
         self.assertNotEqual(initial_hash, modified_hash)
         
+        # Modification 2: Delete the inserted text
         self.rope.delete(0, 4)
         final_text = self.rope.get_text()
+        # Verify text returned to initial state
         self.assertEqual(initial_text, final_text)
         
+        # Hash should match initial value when text and structure are restored
         final_hash = self.rope.get_hash()
-        self.assertNotEqual(initial_hash, final_hash)
+        self.assertEqual(initial_hash, final_hash, 
+            "Hash should match when text and structure return to original state")
+        
+        # Modification 3: Insert same text at different position
+        self.rope.insert(len(initial_text), "test")
+        end_hash = self.rope.get_hash()
+        # Hash should differ when same text is inserted at different position
+        self.assertNotEqual(final_hash, end_hash)
 
     def test_sequence_operations(self):
         """📝 Tests a sequence of mixed operations (insert/delete) on the rope"""

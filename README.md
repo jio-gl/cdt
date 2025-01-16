@@ -84,31 +84,25 @@ class CDTRope:
 ✅ All tests passing:
 
 ```
-🧬 Initialization
-- Empty rope creation
-- Hash consistency for empty structure
-
-✂️  Text Operations
-- Delete from middle of text
-- Delete from beginning
-- Delete from end
-- Substring retrieval
-- Large text operations
-
-🧩 Content-Based Features
-- Chunking algorithm consistency
-- Hash behavior with modifications
-- Node integrity verification
-
-🌳 Tree Operations
-- Rebalancing after multiple insertions
-- Edge case handling for deletions/insertions
-- Mixed operation sequences
-
-🔄 Consistency Checks
-- Identical content produces identical chunks
-- Hash changes properly track modifications
-- Internal node property consistency
+🔄 Tests that identical content produces identical chunk patterns
+🧩 Tests the content-based chunking algorithm's consistency
+🗑️  Tests deleting text from the beginning of the rope
+✂️  Tests deleting text from the end of the rope
+✂️  Tests deleting text from the middle of the rope
+🎯 Tests edge cases in delete operations like negative indices and beyond text length
+🎯 Tests edge cases in insert operations like negative indices and beyond text length
+🧬 Tests initialization of empty rope data structure
+🔐 Tests hash consistency and changes across text modifications
+⛓️ Tests that hash reflects the actual tree structure while maintaining consistency
+🔄 Tests hash equivalence after series of operations that should result in same content
+🔐 Tests hash behavior and content consistency through split and merge operations
+🔍 Tests hash sensitivity to content order and structure
+🌳 Tests hash stability through tree rebalancing operations
+📚 Tests handling of large text operations including insertion and deletion
+🏗️  Tests internal node properties like height, weight, and hash consistency
+🌳 Tests if the tree maintains balance after multiple insertions at the beginning
+📝 Tests a sequence of mixed operations (insert/delete) on the rope
+📄 Tests retrieving substrings from the rope
 ```
 
 ### Chunk Size Considerations

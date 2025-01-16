@@ -368,13 +368,11 @@ class CDTRope:
 class TestCDTRope(unittest.TestCase):
     def setUp(self):
         """Create common test data."""
-        print("\n")  # Add spacing between tests
         self.test_text = "The quick brown fox jumps over the lazy dog"
         self.rope = CDTRope(self.test_text)
 
     def setUp(self):
         """Create common test data."""
-        print("\n") # Add spacing between tests
         self.test_text = "The quick brown fox jumps over the lazy dog"
         self.rope = CDTRope(self.test_text)
         # Get the current test method
@@ -540,6 +538,156 @@ class TestCDTRope(unittest.TestCase):
         if not node:
             return []
         return [node.hash] + self._collect_hashes(node.left) + self._collect_hashes(node.right)
+    
+    def test_hash_equivalence_after_complex_operations(self):
+        """🔄 Tests hash equivalence after series of operations that should result in same content"""
+        # Initial setup
+        text = "Hello World!"
+        rope1 = CDTRope(text)
+        rope2 = CDTRope(text)
+        
+        # Sequence 1: insert-delete-insert with careful space management
+        rope1.insert(5, "Beautiful ")  # "Hello Beautiful World!"
+        rope1.delete(5, 10)           # "Hello World!"
+        rope1.insert(5, "Beautiful ") # "Hello Beautiful World!"
+        
+        # Sequence 2: direct insert with same spacing
+        rope2.insert(5, "Beautiful ") # "Hello Beautiful World!"
+                
+        # Verify both contents and hashes match
+        self.assertEqual(rope1.get_text(), rope2.get_text(),
+            "Texts should match exactly, including spaces")
+        self.assertEqual(rope1.get_hash(), rope2.get_hash(),
+            "Hashes should match when final content is the same")
+    
+    def test_hash_persistence_through_splits_and_merges(self):
+        """🔐 Tests hash behavior and content consistency through split and merge operations"""
+        # Initial text
+        initial_text = "The quick brown fox jumps over the lazy dog"
+        rope = CDTRope(initial_text)
+        
+        # Split rope into three parts
+        middle_index = len(initial_text) // 2
+        left_part, temp = rope._split(rope.root, middle_index)
+        middle_part, right_part = rope._split(temp, 10)
+        
+        # Merge them back in same order
+        merged = rope._merge(left_part, middle_part)
+        final = rope._merge(merged, right_part)
+        
+        # The content should be preserved
+        result_text = rope._get_text_recursive(final)
+        self.assertEqual(initial_text, result_text,
+            "Text content should be preserved after split and merge")
+        
+        # Create a new rope with the same text to compare structure-dependent hashes
+        new_rope = CDTRope(result_text)
+        
+        # Verify properties:
+        # 1. Content must be identical
+        self.assertEqual(new_rope.get_text(), result_text)
+        
+        # 2. Content must match original
+        self.assertEqual(initial_text, new_rope.get_text())
+        
+        # 3. Hash might be different due to different tree structure,
+        #    but multiple splits and merges of the same text should be consistent
+        rope2 = CDTRope(initial_text)
+        left_part2, temp2 = rope2._split(rope2.root, middle_index)
+        middle_part2, right_part2 = rope2._split(temp2, 10)
+        merged2 = rope2._merge(left_part2, middle_part2)
+        final2 = rope2._merge(merged2, right_part2)
+        
+        # Same split/merge sequence should produce same hash
+        self.assertEqual(final.hash, final2.hash,
+            "Same split/merge sequence should produce same hash")
 
+    def test_hash_sensitivity_to_content_order(self):
+        """🔍 Tests hash sensitivity to content order and structure"""
+        # Create two ropes with same characters in different order
+        rope1 = CDTRope("Hello World")
+        rope2 = CDTRope("World Hello")
+        
+        # Hashes should be different despite same character content
+        self.assertNotEqual(rope1.get_hash(), rope2.get_hash(),
+            "Hashes should differ when content order differs")
+        
+        # More subtle case: same words, different spacing
+        rope3 = CDTRope("Hello  World")  # Two spaces
+        rope4 = CDTRope("Hello World")   # One space
+        
+        self.assertNotEqual(rope3.get_hash(), rope4.get_hash(),
+            "Hashes should be sensitive to whitespace differences")
+
+    def test_hash_stability_through_rebalancing(self):
+        """🌳 Tests hash stability through tree rebalancing operations"""
+        # Create a rope that will need rebalancing
+        rope = CDTRope("initial")
+        initial_hash = rope.get_hash()
+        
+        # Force multiple left-heavy insertions
+        for i in range(5):
+            rope.insert(0, f"prefix{i}")
+        
+        # Store hash after insertions
+        after_insertions_hash = rope.get_hash()
+        self.assertNotEqual(initial_hash, after_insertions_hash,
+            "Hash should change after insertions")
+        
+        # Remove all prefixes
+        for i in range(5):
+            rope.delete(0, 7)  # length of "prefixN"
+        
+        # Verify final state
+        self.assertEqual("initial", rope.get_text())
+        self.assertEqual(initial_hash, rope.get_hash(),
+            "Hash should return to initial state after reversing all changes")
+
+    def test_hash_concatenation_properties(self):
+        """⛓️ Tests that hash reflects the actual tree structure while maintaining consistency"""
+        # Test 1: Same content, same structure should have same hash
+        text1, text2, text3 = "Hello", "Beautiful", "World"
+        
+        rope1 = CDTRope(text1)
+        rope1.insert(len(text1), " " + text2)
+        rope1.insert(len(text1) + len(text2) + 1, " " + text3)
+        hash1 = rope1.get_hash()
+        
+        # Create identical tree with same operations
+        rope2 = CDTRope(text1)
+        rope2.insert(len(text1), " " + text2)
+        rope2.insert(len(text1) + len(text2) + 1, " " + text3)
+        hash2 = rope2.get_hash()
+        
+        # Same operations should result in same hash
+        self.assertEqual(hash1, hash2, 
+            "Identical operations should produce identical hashes")
+        self.assertEqual("Hello Beautiful World", rope1.get_text())
+        self.assertEqual("Hello Beautiful World", rope2.get_text())
+        
+        # Test 2: Same content, different structure should have different hashes
+        rope3 = CDTRope(text1 + " " + text2)
+        rope3.insert(len(text1 + " " + text2), " " + text3)
+        hash3 = rope3.get_hash()
+        
+        # Content is same but structure is different
+        self.assertEqual(rope1.get_text(), rope3.get_text(), 
+            "Content should be identical")
+        self.assertNotEqual(hash1, hash3, 
+            "Different tree structures should have different hashes")
+        
+        # Test 3: Hash consistency through modifications
+        initial_hash = rope1.get_hash()
+        initial_text = rope1.get_text()
+        
+        # Modify and then restore to original state
+        rope1.insert(5, "test")
+        rope1.delete(5, 4)
+        
+        self.assertEqual(initial_text, rope1.get_text(),
+            "Text should be restored to original")
+        self.assertEqual(initial_hash, rope1.get_hash(),
+            "Hash should be restored when content and structure are restored")
+    
 if __name__ == '__main__':
     unittest.main()
